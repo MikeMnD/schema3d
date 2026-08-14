@@ -25,11 +25,14 @@ const throttledEvents: typeof events = (store) => {
   return manager;
 };
 import { Table3D } from "./tables/table-3d";
+import { InstancedTables } from "./tables/instanced-tables";
 import { RelationshipLines } from "./relationships/relationship-lines";
+import { BatchedRelationshipLines } from "./relationships/batched-relationship-lines";
 import { CameraController } from "@/visualizer/3d/controls/camera-controller";
 import type { DatabaseSchema, Table } from "@/shared/types/schema";
 import type { Relationship } from "@/visualizer/3d/types";
 import { shouldDimTable, isTableInRelationship } from "@/visualizer/3d/index";
+import { LARGE_SCHEMA_THRESHOLD } from "@/visualizer/3d/constants";
 
 interface SchemaSceneProps {
   schema: DatabaseSchema;
@@ -117,8 +120,13 @@ export function SchemaScene({
     <Canvas
       gl={{ preserveDrawingBuffer: true }}
       events={throttledEvents}
-      onCreated={({ gl }) => {
+      onCreated={({ gl, raycaster }) => {
         glCanvasRef.current = gl.domElement;
+        // Picking slack (px) for batched fat lines, which replace the old
+        // per-relationship invisible collider tubes on large schemas
+        (raycaster.params as { Line2?: { threshold: number } }).Line2 = {
+          threshold: 4,
+        };
       }}
       onPointerMissed={onPointerMissed}
     >
@@ -148,7 +156,7 @@ export function SchemaScene({
       <Stars
         radius={100}
         depth={50}
-        count={visibleTables.length > 100 ? 1000 : 5000}
+        count={visibleTables.length > LARGE_SCHEMA_THRESHOLD ? 1000 : 5000}
         factor={4}
         saturation={0}
         fade
@@ -166,60 +174,99 @@ export function SchemaScene({
       />
 
       <Suspense fallback={null}>
-        <RelationshipLines
-          schema={schema}
-          selectedRelationship={selectedRelationship}
-          hoveredRelationship={hoveredRelationship}
-          selectedTable={selectedTable}
-          onSelect={onRelationshipSelect}
-          onHover={onRelationshipHover}
-          onLongPress={onRelationshipLongPress}
-          animatedPositionsRef={animatedPositionsRef}
-          visibleTableNames={visibleTableNames}
-        />
-
-        {visibleTables.map((table) => {
-          const isMatched = filteredTables.has(table.name);
-          const isRelated = relatedTables.has(table.name);
-          const hasSelection = !!(selectedTable || selectedRelationship);
-
-          const isDimmed = shouldDimTable(
-            table,
-            filteredTables,
-            relatedTables,
-            connectedTables,
-            hasSelection,
-            isFiltering
-          );
-
-          const isRelationshipHighlighted =
-            isTableInRelationship(table, selectedRelationship) ||
-            isTableInRelationship(table, hoveredRelationship);
-
-          return (
-            <Table3D
-              key={table.name}
-              table={table}
-              isSelected={selectedTable?.name === table.name}
-              isHovered={hoveredTable?.name === table.name}
-              isHighlighted={isMatched}
-              isRelated={isRelated}
-              isDimmed={isDimmed}
-              isRelationshipHighlighted={isRelationshipHighlighted}
-              simplifiedRendering={visibleTables.length > 100}
+        {visibleTables.length > LARGE_SCHEMA_THRESHOLD ? (
+          <>
+            <BatchedRelationshipLines
+              schema={schema}
+              selectedRelationship={selectedRelationship}
+              hoveredRelationship={hoveredRelationship}
+              selectedTable={selectedTable}
+              onSelect={onRelationshipSelect}
+              onHover={onRelationshipHover}
+              onLongPress={onRelationshipLongPress}
+              animatedPositionsRef={animatedPositionsRef}
+              visibleTableNames={visibleTableNames}
+            />
+            <InstancedTables
+              tables={visibleTables}
+              selectedTable={selectedTable}
+              hoveredTable={hoveredTable}
+              filteredTables={filteredTables}
+              relatedTables={relatedTables}
+              connectedTables={connectedTables}
+              isFiltering={isFiltering}
+              selectedRelationship={selectedRelationship}
+              hoveredRelationship={hoveredRelationship}
+              targetPositions={targetPositions}
+              animationStartTime={animationStartTime}
+              isAnimating={isAnimating}
+              animatedPositionsRef={animatedPositionsRef}
               onSelect={onTableSelect}
               onHover={onTableHover}
               onLongPress={onTableLongPress}
               onPositionChange={onTablePositionChange}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
-              targetPosition={targetPositions.get(table.name)}
-              animationStartTime={animationStartTime}
-              isAnimating={isAnimating}
-              animatedPositionsRef={animatedPositionsRef}
             />
-          );
-        })}
+          </>
+        ) : (
+          <>
+            <RelationshipLines
+              schema={schema}
+              selectedRelationship={selectedRelationship}
+              hoveredRelationship={hoveredRelationship}
+              selectedTable={selectedTable}
+              onSelect={onRelationshipSelect}
+              onHover={onRelationshipHover}
+              onLongPress={onRelationshipLongPress}
+              animatedPositionsRef={animatedPositionsRef}
+              visibleTableNames={visibleTableNames}
+            />
+
+            {visibleTables.map((table) => {
+              const isMatched = filteredTables.has(table.name);
+              const isRelated = relatedTables.has(table.name);
+              const hasSelection = !!(selectedTable || selectedRelationship);
+
+              const isDimmed = shouldDimTable(
+                table,
+                filteredTables,
+                relatedTables,
+                connectedTables,
+                hasSelection,
+                isFiltering
+              );
+
+              const isRelationshipHighlighted =
+                isTableInRelationship(table, selectedRelationship) ||
+                isTableInRelationship(table, hoveredRelationship);
+
+              return (
+                <Table3D
+                  key={table.name}
+                  table={table}
+                  isSelected={selectedTable?.name === table.name}
+                  isHovered={hoveredTable?.name === table.name}
+                  isHighlighted={isMatched}
+                  isRelated={isRelated}
+                  isDimmed={isDimmed}
+                  isRelationshipHighlighted={isRelationshipHighlighted}
+                  simplifiedRendering={false}
+                  onSelect={onTableSelect}
+                  onHover={onTableHover}
+                  onLongPress={onTableLongPress}
+                  onPositionChange={onTablePositionChange}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                  targetPosition={targetPositions.get(table.name)}
+                  animationStartTime={animationStartTime}
+                  isAnimating={isAnimating}
+                  animatedPositionsRef={animatedPositionsRef}
+                />
+              );
+            })}
+          </>
+        )}
 
         {/* Circular concentric grid */}
         <polarGridHelper args={[40, 0, 8, 128, "#1e293b", "#1e293b"]} />

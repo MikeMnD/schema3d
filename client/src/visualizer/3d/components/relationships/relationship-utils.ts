@@ -1,5 +1,12 @@
 import * as THREE from "three";
-import type { Cardinality, CardinalitySymbol, LineStyle } from "../../types";
+import type {
+  Cardinality,
+  CardinalitySymbol,
+  LineStyle,
+  Relationship,
+} from "../../types";
+import type { DatabaseSchema } from "@/shared/types/schema";
+import { TABLE_RADIUS, RELATIONSHIP_LINE_Y_OFFSET } from "../../constants";
 
 /**
  * Calculate relationship cardinality based on UNIQUE constraints and NULL/NOT NULL constraints
@@ -93,6 +100,101 @@ export function parseCardinality(cardinality: Cardinality): {
     leftIsMany: isMany(leftRaw),
     rightIsMany: isMany(rightRaw),
   };
+}
+
+/**
+ * Build the list of FK relationships between visible tables.
+ *
+ * Uses a lowercase name -> table map so the cost is O(tables + FK columns);
+ * the previous per-FK schema.tables.find(...toLowerCase()) scan was
+ * O(FK columns x tables), which was noticeable on every filter change with
+ * hundreds of tables.
+ */
+export function buildRelationships(
+  schema: DatabaseSchema,
+  visibleTableNames?: Set<string>
+): Relationship[] {
+  const result: Relationship[] = [];
+  const tableByLowerName = new Map(
+    schema.tables.map((table) => [table.name.toLowerCase(), table])
+  );
+
+  schema.tables.forEach((table) => {
+    // Skip if table is not visible
+    if (visibleTableNames && !visibleTableNames.has(table.name)) {
+      return;
+    }
+
+    table.columns.forEach((column) => {
+      if (column.isForeignKey && column.references) {
+        // Case-insensitive matching to handle table name variations
+        const referencedTable = tableByLowerName.get(
+          column.references.table.toLowerCase()
+        );
+
+        // Only include relationship if both tables are visible
+        if (
+          referencedTable &&
+          (!visibleTableNames || visibleTableNames.has(referencedTable.name))
+        ) {
+          // Always use table.position for the initial relationship structure;
+          // per-frame updates handle animated positions separately
+          const fromCenter = new THREE.Vector3(...table.position);
+          const toCenter = new THREE.Vector3(...referencedTable.position);
+
+          fromCenter.y += RELATIONSHIP_LINE_Y_OFFSET;
+          toCenter.y += RELATIONSHIP_LINE_Y_OFFSET;
+
+          const direction = new THREE.Vector3()
+            .subVectors(toCenter, fromCenter)
+            .normalize();
+
+          // Move start/end points to table surface
+          const fromPos = getTableSurfacePoint(
+            fromCenter,
+            direction,
+            TABLE_RADIUS
+          );
+          const toPos = getTableSurfacePoint(
+            toCenter,
+            direction.clone().multiplyScalar(-1),
+            TABLE_RADIUS
+          );
+
+          const curve = new THREE.LineCurve3(fromPos, toPos);
+          const points = [fromPos.clone(), toPos.clone()];
+          const midpoint = new THREE.Vector3()
+            .addVectors(fromPos, toPos)
+            .multiplyScalar(0.5);
+
+          // Find the PK column in the referenced table
+          const pkColumn = referencedTable.columns.find(
+            (c) => c.name === column.references!.column
+          );
+
+          // Use stored cardinality from Mermaid if available, otherwise
+          // calculate from UNIQUE constraints
+          const cardinality: Cardinality =
+            (column.references.cardinality as Cardinality | undefined) ||
+            calculateCardinality(pkColumn, column);
+
+          result.push({
+            id: `${table.name}.${column.name}->${referencedTable.name}.${column.references.column}`,
+            points,
+            fromTable: table.name,
+            toTable: referencedTable.name,
+            fkColumn: column.name,
+            pkColumn: column.references.column,
+            midpoint,
+            curve,
+            cardinality,
+          });
+        }
+      }
+    });
+  });
+
+  return result;
 }
 
 /**

@@ -10,4 +10,6 @@ export * from "./types";
 // Export components
 export { SchemaVisualizer } from "./components/schema-visualizer";
 export { Table3D } from "./components/tables/table-3d";
+export { InstancedTables } from "./components/tables/instanced-tables";
 export { RelationshipLines } from "./components/relationships/relationship-lines";
+export { BatchedRelationshipLines } from "./components/relationships/batched-relationship-lines";
