@@ -1,4 +1,5 @@
 import { useRef, useMemo, useCallback, useEffect } from "react";
+import type { Table } from "@/shared/types/schema";
 import { SchemaMetadata } from "@/shared/metadata";
 import { SchemaScene } from "./schema-scene";
 import { SchemaOverlay } from "@/visualizer/ui/schema-overlay";
@@ -120,6 +121,43 @@ export function SchemaVisualizer() {
     [filterState.filteredTables.size, filterState.relatedTables.size]
   );
 
+  // Stable callbacks for the scene: these are passed to every Table3D, so a
+  // new identity per render would defeat their memo and re-render the whole
+  // table set on every hover/selection change
+  const { handleTablePositionChange } = interactionHandlers;
+  const { setCurrentSchema } = schemaState;
+  const onTablePositionChange = useCallback(
+    (table: Table, newPosition: [number, number, number]) =>
+      handleTablePositionChange(table, newPosition, setCurrentSchema),
+    [handleTablePositionChange, setCurrentSchema]
+  );
+
+  const { setIsDraggingTable } = interactionHandlers;
+  const onDragStart = useCallback(
+    () => setIsDraggingTable(true),
+    [setIsDraggingTable]
+  );
+  const onDragEnd = useCallback(
+    () => setIsDraggingTable(false),
+    [setIsDraggingTable]
+  );
+
+  const { setShouldRecenter } = cameraState;
+  const onRecenterComplete = useCallback(
+    () => setShouldRecenter(false),
+    [setShouldRecenter]
+  );
+
+  const { setSelectedTable, setSelectedRelationship } = selectionState;
+  const onTableClose = useCallback(
+    () => setSelectedTable(null),
+    [setSelectedTable]
+  );
+  const onRelationshipClose = useCallback(
+    () => setSelectedRelationship(null),
+    [setSelectedRelationship]
+  );
+
   return (
     <>
       <SchemaMetadata />
@@ -155,23 +193,15 @@ export function SchemaVisualizer() {
           onTableSelect={selectionState.handleTableSelect}
           onTableHover={selectionState.setHoveredTable}
           onTableLongPress={interactionHandlers.handleTableLongPress}
-          onTablePositionChange={(table, newPosition) =>
-            interactionHandlers.handleTablePositionChange(
-              table,
-              newPosition,
-              schemaState.setCurrentSchema
-            )
-          }
+          onTablePositionChange={onTablePositionChange}
           onRelationshipSelect={selectionState.handleRelationshipSelect}
           onRelationshipHover={selectionState.setHoveredRelationship}
           onRelationshipLongPress={
             interactionHandlers.handleRelationshipLongPress
           }
-          onDragStart={interactionHandlers.setIsDraggingTable.bind(null, true)}
-          onDragEnd={interactionHandlers.setIsDraggingTable.bind(null, false)}
-          onRecenterComplete={useCallback(() => {
-            cameraState.setShouldRecenter(false);
-          }, [cameraState])}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onRecenterComplete={onRecenterComplete}
           onAnimatingChange={cameraState.setIsCameraAnimating}
           glCanvasRef={glCanvasRef}
           onPointerMissed={interactionHandlers.handlePointerMissed}
@@ -203,14 +233,8 @@ export function SchemaVisualizer() {
           onCategoryToggle={filterState.handleCategoryToggle}
           onFilter={filterState.handleFilter}
           onRecenter={cameraState.handleRecenter}
-          onTableClose={useCallback(
-            () => selectionState.setSelectedTable(null),
-            [selectionState]
-          )}
-          onRelationshipClose={useCallback(
-            () => selectionState.setSelectedRelationship(null),
-            [selectionState]
-          )}
+          onTableClose={onTableClose}
+          onRelationshipClose={onRelationshipClose}
         />
       </div>
     </>

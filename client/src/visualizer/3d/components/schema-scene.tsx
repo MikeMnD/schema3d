@@ -1,7 +1,29 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, events } from "@react-three/fiber";
 import { OrbitControls, PerspectiveCamera, Stars } from "@react-three/drei";
 import { Suspense, type ComponentRef } from "react";
 import * as THREE from "three";
+
+// r3f raycasts the whole interactive scene on every DOM pointermove. With
+// hundreds of tables and relationship colliders a mouse sweep fires ~60+
+// raycasts/second and starves the frame budget, so rate-limit move-driven
+// picking to ~30Hz. Click/press/wheel events stay untouched.
+const throttledEvents: typeof events = (store) => {
+  const manager = events(store);
+  const originalPointerMove = manager.handlers?.onPointerMove;
+  if (manager.handlers && originalPointerMove) {
+    let lastMove = 0;
+    manager.handlers = {
+      ...manager.handlers,
+      onPointerMove: (e: Parameters<typeof originalPointerMove>[0]) => {
+        const now = performance.now();
+        if (now - lastMove < 33) return;
+        lastMove = now;
+        originalPointerMove(e);
+      },
+    };
+  }
+  return manager;
+};
 import { Table3D } from "./tables/table-3d";
 import { RelationshipLines } from "./relationships/relationship-lines";
 import { CameraController } from "@/visualizer/3d/controls/camera-controller";
@@ -94,6 +116,7 @@ export function SchemaScene({
   return (
     <Canvas
       gl={{ preserveDrawingBuffer: true }}
+      events={throttledEvents}
       onCreated={({ gl }) => {
         glCanvasRef.current = gl.domElement;
       }}

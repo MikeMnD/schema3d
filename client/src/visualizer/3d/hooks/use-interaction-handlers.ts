@@ -85,6 +85,18 @@ export function useInteractionHandlers(
     ]
   );
 
+  // Depend on the individual fields, not the wrapper objects: callers build
+  // selectionState/cameraState inline every render, so an object dependency
+  // would give every handler a new identity per render and defeat memo on
+  // all Table3D components
+  const { setSelectedTable, setSelectedRelationship } = selectionState;
+  const {
+    setRecenterTarget,
+    setRecenterLookAt,
+    setRecenterTranslateOnly,
+    setShouldRecenter,
+  } = cameraState;
+
   const handleClickAway = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       // Don't close if we just did a long press (prevents interference)
@@ -95,11 +107,15 @@ export function useInteractionHandlers(
       // Check the actual target element that was clicked, not the container
       const target = e.target as HTMLElement;
       if (shouldClosePanels(target)) {
-        selectionState.setSelectedTable(null);
-        selectionState.setSelectedRelationship(null);
+        setSelectedTable(null);
+        setSelectedRelationship(null);
       }
     },
-    [shouldClosePanels, selectionState]
+    [shouldClosePanels, setSelectedTable, setSelectedRelationship]
+  );
+
+  const hasSelection = !!(
+    selectionState.selectedTable || selectionState.selectedRelationship
   );
 
   const handlePointerMissed = useCallback(() => {
@@ -109,11 +125,11 @@ export function useInteractionHandlers(
     }
 
     // Close details panels when clicking on empty space in 3D scene
-    if (selectionState.selectedTable || selectionState.selectedRelationship) {
-      selectionState.setSelectedTable(null);
-      selectionState.setSelectedRelationship(null);
+    if (hasSelection) {
+      setSelectedTable(null);
+      setSelectedRelationship(null);
     }
-  }, [selectionState]);
+  }, [hasSelection, setSelectedTable, setSelectedRelationship]);
 
   const handleTableLongPress = useCallback(
     (table: Table) => {
@@ -121,20 +137,28 @@ export function useInteractionHandlers(
       setLongPressFlag();
 
       // Select the table and clear relationship selection
-      selectionState.setSelectedTable(table);
-      selectionState.setSelectedRelationship(null);
+      setSelectedTable(table);
+      setSelectedRelationship(null);
 
       // Re-center camera on the table (without rotating)
       const targetPoint = new THREE.Vector3(...table.position);
       const { position, lookAt } =
         calculateCameraPositionForRecenter(targetPoint);
 
-      cameraState.setRecenterTarget(position);
-      cameraState.setRecenterLookAt(lookAt);
-      cameraState.setRecenterTranslateOnly(true); // Long press should only translate
-      cameraState.setShouldRecenter(true);
+      setRecenterTarget(position);
+      setRecenterLookAt(lookAt);
+      setRecenterTranslateOnly(true); // Long press should only translate
+      setShouldRecenter(true);
     },
-    [setLongPressFlag, selectionState, cameraState]
+    [
+      setLongPressFlag,
+      setSelectedTable,
+      setSelectedRelationship,
+      setRecenterTarget,
+      setRecenterLookAt,
+      setRecenterTranslateOnly,
+      setShouldRecenter,
+    ]
   );
 
   const handleRelationshipLongPress = useCallback(
@@ -143,8 +167,8 @@ export function useInteractionHandlers(
       setLongPressFlag();
 
       // Select the relationship and clear table selection
-      selectionState.setSelectedRelationship(relationship);
-      selectionState.setSelectedTable(null);
+      setSelectedRelationship(relationship);
+      setSelectedTable(null);
 
       // Find the two tables connected by this relationship
       const fromTable = currentSchema.tables.find(
@@ -166,18 +190,24 @@ export function useInteractionHandlers(
         const { position, lookAt } =
           calculateCameraPositionForRecenter(centerPoint);
 
-        cameraState.setRecenterTarget(position);
-        cameraState.setRecenterLookAt(lookAt);
-        cameraState.setShouldRecenter(true);
+        setRecenterTarget(position);
+        setRecenterLookAt(lookAt);
+        setShouldRecenter(true);
       }
     },
-    [currentSchema, setLongPressFlag, selectionState, cameraState]
+    [
+      currentSchema,
+      setLongPressFlag,
+      setSelectedTable,
+      setSelectedRelationship,
+      setRecenterTarget,
+      setRecenterLookAt,
+      setShouldRecenter,
+    ]
   );
 
-  return {
-    handleTableLongPress,
-    handleRelationshipLongPress,
-    handleTablePositionChange: (
+  const handleTablePositionChange = useCallback(
+    (
       table: Table,
       newPosition: [number, number, number],
       setCurrentSchema: React.Dispatch<React.SetStateAction<DatabaseSchema>>
@@ -189,6 +219,13 @@ export function useInteractionHandlers(
         return { ...prevSchema, tables: updatedTables };
       });
     },
+    []
+  );
+
+  return {
+    handleTableLongPress,
+    handleRelationshipLongPress,
+    handleTablePositionChange,
     handleClickAway,
     handlePointerMissed,
     setLongPressFlag,
