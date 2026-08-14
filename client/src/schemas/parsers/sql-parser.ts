@@ -150,17 +150,22 @@ const REGEX = {
   CREATE_TABLE:
     /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:["[`]?(\w+)["\]`]?\s*\.\s*)?["[`]?([\w]+)["\]`]?\s*\(/gi,
 
-  // ALTER TABLE ADD: ALTER TABLE [schema].[table] ADD [COLUMN] ...
+  // ALTER TABLE ADD: ALTER TABLE [ONLY] [schema].[table] ADD [COLUMN] ...
+  // (pg_dump emits ALTER TABLE ONLY for table-level statements)
   ALTER_TABLE_ADD:
-    /ALTER\s+TABLE\s+(?:["[`]?(\w+)["\]`]?\s*\.\s*)?["[`]?([\w]+)["\]`]?\s+ADD\s+(?:COLUMN\s+)?/gi,
+    /ALTER\s+TABLE\s+(?:ONLY\s+)?(?:["[`]?(\w+)["\]`]?\s*\.\s*)?["[`]?([\w]+)["\]`]?\s+ADD\s+(?:COLUMN\s+)?/gi,
 
   // ALTER TABLE ADD CONSTRAINT UNIQUE
   ALTER_TABLE_UNIQUE:
-    /ALTER\s+TABLE\s+(?:(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\.\s*)?(\[[^\]]+\]|"[^"]+"|[\w]+)\s+ADD\s+CONSTRAINT\s+(\[[^\]]+\]|"[^"]+"|[\w]+)\s+UNIQUE\s*\((\[[^\]]+\]|"[^"]+"|[\w]+)\)/gi,
+    /ALTER\s+TABLE\s+(?:ONLY\s+)?(?:(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\.\s*)?(\[[^\]]+\]|"[^"]+"|[\w]+)\s+ADD\s+CONSTRAINT\s+(\[[^\]]+\]|"[^"]+"|[\w]+)\s+UNIQUE\s*\((\[[^\]]+\]|"[^"]+"|[\w]+)\)/gi,
+
+  // ALTER TABLE ADD CONSTRAINT PRIMARY KEY (pg_dump always declares PKs this way)
+  ALTER_TABLE_PK:
+    /ALTER\s+TABLE\s+(?:ONLY\s+)?(?:(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\.\s*)?(\[[^\]]+\]|"[^"]+"|[\w]+)\s+ADD\s+CONSTRAINT\s+(\[[^\]]+\]|"[^"]+"|[\w~]+)\s+PRIMARY\s+KEY\s*\(([^)]+)\)/gi,
 
   // ALTER TABLE ADD CONSTRAINT FOREIGN KEY
   ALTER_TABLE_FK:
-    /ALTER\s+TABLE\s+(?:(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\.\s*)?(\[[^\]]+\]|"[^"]+"|[\w]+)\s+(?:WITH\s+(?:NO)?CHECK\s+)?ADD\s+CONSTRAINT\s+(\[[^\]]+\]|"[^"]+"|[\w~]+)\s+FOREIGN\s+KEY\s*\((\[[^\]]+\]|"[^"]+"|[\w]+)\)\s+REFERENCES\s+(?:(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\.\s*)?(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\((\[[^\]]+\]|"[^"]+"|[\w]+)\)/gi,
+    /ALTER\s+TABLE\s+(?:ONLY\s+)?(?:(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\.\s*)?(\[[^\]]+\]|"[^"]+"|[\w]+)\s+(?:WITH\s+(?:NO)?CHECK\s+)?ADD\s+CONSTRAINT\s+(\[[^\]]+\]|"[^"]+"|[\w~]+)\s+FOREIGN\s+KEY\s*\((\[[^\]]+\]|"[^"]+"|[\w]+)\)\s+REFERENCES\s+(?:(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\.\s*)?(\[[^\]]+\]|"[^"]+"|[\w]+)\s*\((\[[^\]]+\]|"[^"]+"|[\w]+)\)/gi,
 
   // CREATE VIEW: CREATE [OR REPLACE] VIEW [schema].[view] [AS] ...
   CREATE_VIEW:
@@ -1052,6 +1057,30 @@ function applyAlterTableStatements(sql: string, tables: ParsedTable[]): void {
       const column = findColumnByName(table.columns, columnName);
       if (column) {
         column.isUnique = true;
+      }
+    }
+  }
+
+  // Handle ALTER TABLE ADD CONSTRAINT PRIMARY KEY statements (pg_dump format)
+  // Format: ALTER TABLE ONLY schema."Table" ADD CONSTRAINT "PK_Table" PRIMARY KEY ("Id");
+  // Supports composite keys: PRIMARY KEY ("UserId", "RoleId")
+  const alterTablePkRegex = new RegExp(
+    REGEX.ALTER_TABLE_PK.source,
+    REGEX.ALTER_TABLE_PK.flags
+  );
+
+  let pkMatch;
+  while ((pkMatch = alterTablePkRegex.exec(cleanedSql)) !== null) {
+    const tableName = extractIdentifier(pkMatch[2] || pkMatch[1] || "");
+    const table = findTableByName(tables, tableName);
+    if (!table) continue;
+
+    for (const rawColumn of pkMatch[4].split(",")) {
+      const columnName = extractIdentifier(rawColumn);
+      const column = columnName && findColumnByName(table.columns, columnName);
+      if (column) {
+        column.isPrimaryKey = true;
+        column.isNullable = false;
       }
     }
   }
