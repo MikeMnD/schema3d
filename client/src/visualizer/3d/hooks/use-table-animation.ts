@@ -1,34 +1,35 @@
 import { useState, useRef, useCallback } from "react";
 import type { DatabaseSchema } from "@/shared/types/schema";
+import type { AnimatedPositionsRef } from "../types";
 
 interface UseTableAnimationReturn {
   targetPositions: Map<string, [number, number, number]>;
-  animatedPositions: Map<string, [number, number, number]>;
   animationStartTime: number | null;
   isAnimating: boolean;
-  animatedPositionsRef: React.MutableRefObject<
-    Map<string, [number, number, number]>
-  >;
+  animatedPositionsRef: AnimatedPositionsRef;
   startTableAnimation: (schemaLayout: DatabaseSchema) => void;
-  onAnimatedPositionChange: (
-    tableName: string,
-    position: [number, number, number]
-  ) => void;
 }
 
+/**
+ * Manages table position animations when switching layouts or view modes.
+ *
+ * React state changes only at animation start/end. The per-frame animated
+ * positions live exclusively in `animatedPositionsRef`: each Table3D writes
+ * its interpolated position there from useFrame, and relationship lines read
+ * it from their own useFrame. Routing the per-frame positions through React
+ * state (a fresh Map per table per frame) previously re-rendered the whole
+ * scene graph ~400 times per frame and dropped layout animations to 9fps on
+ * large schemas.
+ */
 export function useTableAnimation(
   setCurrentSchema: React.Dispatch<React.SetStateAction<DatabaseSchema>>
 ): UseTableAnimationReturn {
-  // Use state to track ref values for render (to avoid accessing refs during render)
   const [animationStartTimeState, setAnimationStartTimeState] = useState<
     number | null
   >(null);
   const [isAnimatingState, setIsAnimatingState] = useState(false);
 
   const [targetPositions, setTargetPositions] = useState<
-    Map<string, [number, number, number]>
-  >(new Map());
-  const [animatedPositions, setAnimatedPositions] = useState<
     Map<string, [number, number, number]>
   >(new Map());
   const animationStartTimeRef = useRef<number | null>(null);
@@ -86,7 +87,6 @@ export function useTableAnimation(
         });
 
         animatedPositionsRef.current = initialPositions;
-        setAnimatedPositions(new Map(initialPositions));
 
         // Set target positions from the new layout
         const newTargetPositions = new Map<string, [number, number, number]>();
@@ -108,13 +108,12 @@ export function useTableAnimation(
 
           // Keep isAnimatingRef true until schema update is confirmed
           // This prevents RelationshipLines from flashing when it falls back to table.position
-          // RelationshipLines only uses animatedPositions when isAnimatingRef is true
+          // RelationshipLines fall back to table.position once the map is cleared
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               // Now safe to clear - schema should be updated and RelationshipLines will use table.position
               isAnimatingRef.current = false;
               animatedPositionsRef.current.clear();
-              setAnimatedPositions(new Map());
               setAnimationStartTimeState(null);
               setIsAnimatingState(false);
               animationTimeoutRef.current = null;
@@ -128,25 +127,11 @@ export function useTableAnimation(
     [setCurrentSchema, setAnimationStartTimeState, setIsAnimatingState]
   );
 
-  const onAnimatedPositionChange = useCallback(
-    (tableName: string, position: [number, number, number]) => {
-      // Update ref immediately for useFrame access
-      animatedPositionsRef.current.set(tableName, position);
-
-      // Update state immediately to ensure RelationshipLines get updates
-      // Create a new Map to trigger React re-render
-      setAnimatedPositions(new Map(animatedPositionsRef.current));
-    },
-    []
-  );
-
   return {
     targetPositions,
-    animatedPositions,
     animationStartTime: animationStartTimeState,
     isAnimating: isAnimatingState,
     animatedPositionsRef,
     startTableAnimation,
-    onAnimatedPositionChange,
   };
 }

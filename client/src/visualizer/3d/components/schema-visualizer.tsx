@@ -141,7 +141,6 @@ export function SchemaVisualizer() {
           connectedTables={connectedTables}
           isFiltering={isFiltering}
           targetPositions={animationState.targetPositions}
-          animatedPositions={animationState.animatedPositions}
           animationStartTime={animationState.animationStartTime}
           isAnimating={animationState.isAnimating}
           animatedPositionsRef={animationState.animatedPositionsRef}
@@ -168,7 +167,6 @@ export function SchemaVisualizer() {
           onRelationshipLongPress={
             interactionHandlers.handleRelationshipLongPress
           }
-          onAnimatedPositionChange={animationState.onAnimatedPositionChange}
           onDragStart={interactionHandlers.setIsDraggingTable.bind(null, true)}
           onDragEnd={interactionHandlers.setIsDraggingTable.bind(null, false)}
           onRecenterComplete={useCallback(() => {

@@ -34,7 +34,7 @@ export function RelationshipLines({
   onSelect,
   onHover,
   onLongPress,
-  animatedPositions,
+  animatedPositionsRef,
   visibleTableNames,
 }: RelationshipLinesProps) {
   const isLargeSchema = schema.tables.length > 50;
@@ -153,7 +153,7 @@ export function RelationshipLines({
             onSelect={onSelect}
             onHover={onHover}
             onLongPress={onLongPress}
-            animatedPositions={animatedPositions}
+            animatedPositionsRef={animatedPositionsRef}
             schema={schema}
             showLabel={
               !isLargeSchema ||
@@ -178,7 +178,7 @@ function RelationshipLine({
   onSelect,
   onHover,
   onLongPress,
-  animatedPositions,
+  animatedPositionsRef,
   schema,
   showLabel = true,
 }: RelationshipLineProps) {
@@ -276,6 +276,7 @@ function RelationshipLine({
     const toTable = tableLookupRef.current.get(relationship.toTable);
 
     if (fromTable && toTable) {
+      const animatedPositions = animatedPositionsRef?.current;
       const fromTablePos =
         animatedPositions?.get(relationship.fromTable) || fromTable.position;
       const toTablePos =

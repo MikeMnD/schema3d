@@ -1,5 +1,15 @@
 import * as THREE from "three";
+import type { MutableRefObject } from "react";
 import type { Table, DatabaseSchema } from "@/shared/types/schema";
+
+/**
+ * Shared mutable map of table name -> position, written by Table3D during
+ * layout animations and read by relationship lines inside useFrame. Kept in
+ * a ref (not React state) so per-frame position updates never re-render.
+ */
+export type AnimatedPositionsRef = MutableRefObject<
+  Map<string, [number, number, number]>
+>;
 
 export type CardinalitySymbol = "1" | "N" | "0..1" | "1..N" | "0..N";
 export type Cardinality = `${CardinalitySymbol}:${CardinalitySymbol}`;
@@ -38,10 +48,7 @@ export interface Table3DProps {
   targetPosition?: [number, number, number];
   animationStartTime?: number | null;
   isAnimating?: boolean;
-  onAnimatedPositionChange?: (
-    tableName: string,
-    position: [number, number, number]
-  ) => void;
+  animatedPositionsRef?: AnimatedPositionsRef;
 }
 
 export interface RelationshipLinesProps {
@@ -52,7 +59,7 @@ export interface RelationshipLinesProps {
   onSelect?: (relationship: Relationship | null) => void;
   onHover?: (relationship: Relationship | null) => void;
   onLongPress?: (relationship: Relationship) => void;
-  animatedPositions?: Map<string, [number, number, number]>;
+  animatedPositionsRef?: AnimatedPositionsRef;
   visibleTableNames?: Set<string>;
 }
 
@@ -66,7 +73,7 @@ export interface RelationshipLineProps {
   onSelect?: (relationship: Relationship | null) => void;
   onHover?: (relationship: Relationship | null) => void;
   onLongPress?: (relationship: Relationship) => void;
-  animatedPositions?: Map<string, [number, number, number]>;
+  animatedPositionsRef?: AnimatedPositionsRef;
   schema: DatabaseSchema;
   showLabel?: boolean;
 }

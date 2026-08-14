@@ -38,7 +38,7 @@ export const Table3D = memo(function Table3D({
   targetPosition,
   animationStartTime,
   isAnimating = false,
-  onAnimatedPositionChange,
+  animatedPositionsRef,
 }: Table3DProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const groupRef = useRef<THREE.Group>(null);
@@ -51,14 +51,12 @@ export const Table3D = memo(function Table3D({
   const currentAnimatedPositionRef = useRef<[number, number, number]>(
     table.position
   );
-  const lastReportedPositionRef = useRef<[number, number, number] | null>(null);
 
   // Reset position refs when table position changes and not animating
   useEffect(() => {
     if (!isAnimating) {
       startPositionRef.current = table.position;
       currentAnimatedPositionRef.current = table.position;
-      lastReportedPositionRef.current = null;
 
       if (groupRef.current) {
         groupRef.current.position.set(
@@ -405,18 +403,9 @@ export const Table3D = memo(function Table3D({
         animatedPos[2]
       );
 
-      // Throttle position updates to reduce state update frequency
-      // Only update if position changed significantly (0.01 units) or animation just started
-      const shouldUpdate =
-        !lastReportedPositionRef.current ||
-        Math.abs(animatedPos[0] - lastReportedPositionRef.current[0]) > 0.01 ||
-        Math.abs(animatedPos[1] - lastReportedPositionRef.current[1]) > 0.01 ||
-        Math.abs(animatedPos[2] - lastReportedPositionRef.current[2]) > 0.01;
-
-      if (shouldUpdate && onAnimatedPositionChange) {
-        onAnimatedPositionChange(table.name, animatedPos);
-        lastReportedPositionRef.current = animatedPos;
-      }
+      // Publish the position for relationship lines via the shared ref —
+      // never through React state, which would re-render the scene per frame
+      animatedPositionsRef?.current.set(table.name, animatedPos);
     } else if (groupRef.current && !isAnimating) {
       // Use actual table position when not animating
       groupRef.current.position.set(

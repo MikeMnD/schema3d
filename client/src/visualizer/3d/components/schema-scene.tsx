@@ -22,7 +22,6 @@ interface SchemaSceneProps {
   connectedTables: Set<string>;
   isFiltering: boolean;
   targetPositions: Map<string, [number, number, number]>;
-  animatedPositions: Map<string, [number, number, number]>;
   animationStartTime: number | null;
   isAnimating: boolean;
   animatedPositionsRef: React.MutableRefObject<
@@ -46,10 +45,6 @@ interface SchemaSceneProps {
   onRelationshipSelect: (relationship: Relationship | null) => void;
   onRelationshipHover: (relationship: Relationship | null) => void;
   onRelationshipLongPress: (relationship: Relationship) => void;
-  onAnimatedPositionChange: (
-    tableName: string,
-    position: [number, number, number]
-  ) => void;
   onDragStart: () => void;
   onDragEnd: () => void;
   onRecenterComplete: () => void;
@@ -71,10 +66,9 @@ export function SchemaScene({
   connectedTables,
   isFiltering,
   targetPositions,
-  animatedPositions,
   animationStartTime,
   isAnimating,
-  animatedPositionsRef: _animatedPositionsRef,
+  animatedPositionsRef,
   maxCameraDistance,
   isCameraAnimating,
   isDraggingTable,
@@ -90,7 +84,6 @@ export function SchemaScene({
   onRelationshipSelect,
   onRelationshipHover,
   onRelationshipLongPress,
-  onAnimatedPositionChange,
   onDragStart,
   onDragEnd,
   onRecenterComplete,
@@ -158,7 +151,7 @@ export function SchemaScene({
           onSelect={onRelationshipSelect}
           onHover={onRelationshipHover}
           onLongPress={onRelationshipLongPress}
-          animatedPositions={isAnimating ? animatedPositions : undefined}
+          animatedPositionsRef={animatedPositionsRef}
           visibleTableNames={visibleTableNames}
         />
 
@@ -200,7 +193,7 @@ export function SchemaScene({
               targetPosition={targetPositions.get(table.name)}
               animationStartTime={animationStartTime}
               isAnimating={isAnimating}
-              onAnimatedPositionChange={onAnimatedPositionChange}
+              animatedPositionsRef={animatedPositionsRef}
             />
           );
         })}
