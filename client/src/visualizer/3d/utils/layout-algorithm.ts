@@ -272,17 +272,29 @@ export function applyHierarchicalLayout(
   const levels = new Map<string, number>();
   const visited = new Set<string>();
 
-  // Include all tables and views in root calculation (views now have relationships)
-  const rootTables = schema.tables.filter((table) => {
-    const hasIncomingFK = schema.tables.some((t) =>
-      t.columns.some(
-        (col) => col.isForeignKey && col.references?.table === table.name
-      )
-    );
-    const hasOutgoingFK = table.columns.some((col) => col.isForeignKey);
+  // Build FK adjacency once: the previous per-table scans over all
+  // tables x columns made root detection and level assignment O(n^2 x cols),
+  // which blocked the main thread for a while on multi-hundred-table schemas
+  const outgoing = new Map<string, string[]>(); // table -> tables it references
+  const incoming = new Map<string, string[]>(); // table -> tables referencing it
+  schema.tables.forEach((table) => {
+    table.columns.forEach((col) => {
+      if (col.isForeignKey && col.references) {
+        let out = outgoing.get(table.name);
+        if (!out) outgoing.set(table.name, (out = []));
+        out.push(col.references.table);
 
-    return !hasOutgoingFK || !hasIncomingFK;
+        let inc = incoming.get(col.references.table);
+        if (!inc) incoming.set(col.references.table, (inc = []));
+        inc.push(table.name);
+      }
+    });
   });
+
+  // Include all tables and views in root calculation (views now have relationships)
+  const rootTables = schema.tables.filter(
+    (table) => !outgoing.has(table.name) || !incoming.has(table.name)
+  );
 
   function assignLevel(tableName: string, level: number) {
     if (visited.has(tableName)) return;
@@ -291,21 +303,11 @@ export function applyHierarchicalLayout(
     const currentLevel = levels.get(tableName) || 0;
     levels.set(tableName, Math.max(currentLevel, level));
 
-    const table = schema.tables.find((t) => t.name === tableName);
-    if (!table) return;
-
-    table.columns.forEach((col) => {
-      if (col.isForeignKey && col.references) {
-        assignLevel(col.references.table, level - 1);
-      }
+    outgoing.get(tableName)?.forEach((referenced) => {
+      assignLevel(referenced, level - 1);
     });
-
-    schema.tables.forEach((t) => {
-      t.columns.forEach((col) => {
-        if (col.isForeignKey && col.references?.table === tableName) {
-          assignLevel(t.name, level + 1);
-        }
-      });
+    incoming.get(tableName)?.forEach((referencing) => {
+      assignLevel(referencing, level + 1);
     });
   }
 

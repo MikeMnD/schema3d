@@ -994,6 +994,16 @@ function applyAlterTableStatements(sql: string, tables: ParsedTable[]): void {
   // Remove GO statements and comments
   const cleanedSql = cleanSql(sql);
 
+  // Constraint statements only reference tables created earlier, so one
+  // case-insensitive lookup map serves the whole pass. Real-world dumps have
+  // hundreds of ALTER statements; a linear scan per statement made loading
+  // large schemas measurably slower.
+  const tablesByLowerName = new Map(
+    tables.map((table) => [table.name.toLowerCase(), table])
+  );
+  const findTable = (name: string): ParsedTable | undefined =>
+    tablesByLowerName.get(name.toLowerCase());
+
   // First, handle ALTER TABLE ADD column statements
   // This must come before FOREIGN KEY constraints so columns exist when we add constraints
   // ALTER TABLE [schema.]table_name ADD [COLUMN] column_name ...
@@ -1021,7 +1031,7 @@ function applyAlterTableStatements(sql: string, tables: ParsedTable[]): void {
       .trim();
 
     // Find the table in our parsed tables
-    const table = findTableByName(tables, tableName);
+    const table = findTable(tableName);
     if (table && alterStatement) {
       // Handle both single column and multiple columns in parentheses
       let columnsToAdd: string;
@@ -1052,7 +1062,7 @@ function applyAlterTableStatements(sql: string, tables: ParsedTable[]): void {
     const tableName = extractIdentifier(getTableNameFromMatch(uniqueMatch));
     const columnName = extractIdentifier(uniqueMatch[4] || "");
 
-    const table = findTableByName(tables, tableName);
+    const table = findTable(tableName);
     if (table && columnName) {
       const column = findColumnByName(table.columns, columnName);
       if (column) {
@@ -1072,7 +1082,7 @@ function applyAlterTableStatements(sql: string, tables: ParsedTable[]): void {
   let pkMatch;
   while ((pkMatch = alterTablePkRegex.exec(cleanedSql)) !== null) {
     const tableName = extractIdentifier(pkMatch[2] || pkMatch[1] || "");
-    const table = findTableByName(tables, tableName);
+    const table = findTable(tableName);
     if (!table) continue;
 
     for (const rawColumn of pkMatch[4].split(",")) {
@@ -1105,10 +1115,10 @@ function applyAlterTableStatements(sql: string, tables: ParsedTable[]): void {
     const parentColumnName = extractIdentifier(fkMatch[7] || "");
 
     // Find the child table and update the column to mark it as a foreign key
-    const childTable = findTableByName(tables, childTableName);
+    const childTable = findTable(childTableName);
     if (childTable && childColumnName && parentTableName && parentColumnName) {
       // Find the parent table to get its actual name (for case matching)
-      const parentTable = findTableByName(tables, parentTableName);
+      const parentTable = findTable(parentTableName);
       if (!parentTable) {
         // Parent table doesn't exist, skip this constraint
         continue;
