@@ -64,9 +64,11 @@ export function easeInOutCubic(progress: number): number {
  * @returns Default camera position for schema viewing
  */
 export function getDefaultCameraPosition(maxDistance: number): THREE.Vector3 {
-  // Use 50% of max distance for a good initial view
-  // Maintain the default viewing angle (similar to original 0, 8, 20)
-  const distance = Math.max(20, maxDistance * 0.5);
+  // maxDistance is 2x the furthest table, so 0.65x places the camera at
+  // ~1.3x the schema radius — outside the table cloud with the whole schema
+  // in frame (0.5x put the camera exactly on the cloud surface for large
+  // schemas, showing an apparently empty scene)
+  const distance = Math.max(20, maxDistance * 0.65);
   return new THREE.Vector3(0, distance * 0.4, distance);
 }
 
@@ -95,9 +97,11 @@ export function calculateMaxCameraDistance(
     }
   });
 
-  // Set maxDistance to 2x the furthest distance, with minimum of 50 and maximum of 400
-  // This allows zooming out enough to see the entire schema plus some extra space
-  return Math.max(50, Math.min(400, maxDistance * 2));
+  // Set maxDistance to 2x the furthest distance, with minimum of 50 and
+  // maximum of 1000 (must stay well inside the camera far plane of 2000).
+  // This allows zooming out enough to see the entire schema plus some extra
+  // space; the old 400 cap was smaller than large layouts themselves.
+  return Math.max(50, Math.min(1000, maxDistance * 2));
 }
 
 /**

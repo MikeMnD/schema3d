@@ -125,6 +125,17 @@ export function applyForceDirectedLayout(
   const damping = 0.85; // Slightly less damping for more movement
   const centerForce = viewMode === "3D" ? 0.01 : 0; // Weak center force in 3D to prevent drift
 
+  // Node degree, used to normalize spring forces. A hub node with hundreds of
+  // edges (e.g. a tenant/user table every other table references) would
+  // otherwise accumulate a net spring step several times larger than its
+  // distance to equilibrium, which makes the integration oscillate with
+  // growing amplitude until positions overflow.
+  const degree = new Map<string, number>();
+  edges.forEach((edge) => {
+    degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+    degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
+  });
+
   for (let iter = 0; iter < iterations; iter++) {
     // Reset velocities
     nodes.forEach((node) => {
@@ -199,20 +210,41 @@ export function applyForceDirectedLayout(
       const fy = (dy / distance) * displacement;
       const fz = (dz / distance) * displacement;
 
-      source.vx += fx / source.mass;
-      source.vy += fy / source.mass;
-      source.vz += fz / source.mass;
+      // Normalize by degree so the total spring pull on a node stays bounded
+      // regardless of how many edges it has
+      const sourceDegree = Math.max(1, degree.get(edge.source) || 1);
+      const targetDegree = Math.max(1, degree.get(edge.target) || 1);
 
-      target.vx -= fx / target.mass;
-      target.vy -= fy / target.mass;
-      target.vz -= fz / target.mass;
+      source.vx += fx / (source.mass * sourceDegree);
+      source.vy += fy / (source.mass * sourceDegree);
+      source.vz += fz / (source.mass * sourceDegree);
+
+      target.vx -= fx / (target.mass * targetDegree);
+      target.vy -= fy / (target.mass * targetDegree);
+      target.vz -= fz / (target.mass * targetDegree);
     });
 
-    // Update positions
+    // Update positions with a cooling clamp (Fruchterman-Reingold style):
+    // the maximum step shrinks over iterations, which bounds any residual
+    // oscillation and lets the layout settle instead of diverging
+    const temperature = Math.max(
+      0.5,
+      initialRadius * 0.3 * (1 - iter / iterations)
+    );
     nodes.forEach((node) => {
-      node.x += node.vx * damping;
-      node.y += node.vy * damping;
-      node.z += node.vz * damping;
+      let dx = node.vx * damping;
+      let dy = node.vy * damping;
+      let dz = node.vz * damping;
+      const step = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (step > temperature) {
+        const scale = temperature / step;
+        dx *= scale;
+        dy *= scale;
+        dz *= scale;
+      }
+      node.x += dx;
+      node.y += dy;
+      node.z += dz;
     });
   }
 
@@ -354,7 +386,15 @@ export function applyCircularLayout(
   viewMode: "2D" | "3D" = "3D"
 ): DatabaseSchema {
   const totalItems = schema.tables.length;
-  const radius = Math.max(6, totalItems * 0.8);
+  // 2D places tables on a single circle, so radius must grow linearly with
+  // count to keep spacing. The 3D golden-spiral distributes over a sphere
+  // SURFACE (area ~ radius²), so radius only needs to grow with sqrt(count) —
+  // linear growth made large schemas impossibly big to frame (400 tables →
+  // radius 320 while the camera zoom limit is far smaller).
+  const radius =
+    viewMode === "3D"
+      ? Math.max(6, Math.min(totalItems * 0.8, Math.sqrt(totalItems) * 2.5))
+      : Math.max(6, totalItems * 0.8);
 
   const updatedTables: Table[] = schema.tables.map((table, index) => {
     if (viewMode === "3D") {
