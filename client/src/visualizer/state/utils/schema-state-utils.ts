@@ -1,5 +1,8 @@
 import type { DatabaseSchema } from "@/shared/types/schema";
-import { getRetailerSchema } from "@/schemas/utils/load-schemas";
+import {
+  getCosherSchema,
+  getRetailerSchema,
+} from "@/schemas/utils/load-schemas";
 
 /**
  * Initialize selected categories with all categories from a schema
@@ -16,7 +19,7 @@ export function initializeCategories(schema: DatabaseSchema): Set<string> {
  * Get initial categories from default schema
  */
 export function getInitialCategories(): Set<string> {
-  return initializeCategories(getRetailerSchema());
+  return initializeCategories(getCosherSchema() ?? getRetailerSchema());
 }
 
 /**

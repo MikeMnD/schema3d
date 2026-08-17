@@ -9,6 +9,7 @@ import {
 import {
   DEFAULT_LAYOUT,
   DEFAULT_VIEW_MODE,
+  getDefaultBaseSchema,
   getInitialSchema,
 } from "@/visualizer/state/initial-state";
 
@@ -120,8 +121,9 @@ describe("Initial Layout State", () => {
       // Use the centralized getInitialSchema function
       const initialSchema = getInitialSchema();
 
-      // Verify it's the Retailer schema (default)
-      expect(initialSchema.name).toBe("Retailer");
+      // Verify it is the default schema (Cosher DB when its gitignored
+      // dump is present, Retailer otherwise, e.g. on CI)
+      expect(initialSchema.name).toBe(getDefaultBaseSchema().name);
 
       // Verify layout was applied (tables should have spread-out positions)
       const positions = initialSchema.tables.map((t) => t.position);
@@ -134,7 +136,7 @@ describe("Initial Layout State", () => {
     it("should produce the same result as manually applying default layout", () => {
       // getInitialSchema should produce the same result as manual application
       const initialSchema = getInitialSchema();
-      const baseSchema = getRetailerSchema();
+      const baseSchema = getDefaultBaseSchema();
       const manualSchema = applyLayoutToSchema(
         baseSchema,
         DEFAULT_LAYOUT,

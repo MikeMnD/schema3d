@@ -5,7 +5,10 @@
  */
 
 import type { DatabaseSchema } from "@/shared/types/schema";
-import { getRetailerSchema } from "@/schemas/utils/load-schemas";
+import {
+  getCosherSchema,
+  getRetailerSchema,
+} from "@/schemas/utils/load-schemas";
 import { applyLayoutToSchema } from "@/visualizer/state/utils/schema-utils";
 import { parseSchema } from "@/schemas/parsers";
 import { getSchemaFromHash } from "@/shared/utils/url-state";
@@ -38,9 +41,11 @@ export const DEFAULT_VIEW_MODE: "2D" | "3D" = "3D";
 
 /**
  * The default schema loader function.
- * Returns the Retailer schema as the initial sample schema.
+ * Returns the Cosher DB schema when its (gitignored) dump is present,
+ * otherwise falls back to the Retailer demo schema.
  */
-export const getDefaultBaseSchema = getRetailerSchema;
+export const getDefaultBaseSchema = (): DatabaseSchema =>
+  getCosherSchema() ?? getRetailerSchema();
 
 // ============================================
 // Initial Schema State
@@ -113,7 +118,7 @@ export function getInitialSchema(): DatabaseSchema {
     // Fall through to default schema
   }
 
-  // Default: load retailer schema
+  // Default: load the Cosher DB schema
   const baseSchema = getDefaultBaseSchema();
   return applyLayoutToSchema(baseSchema, DEFAULT_LAYOUT, DEFAULT_VIEW_MODE);
 }
