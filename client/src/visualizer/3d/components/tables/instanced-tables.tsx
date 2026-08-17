@@ -621,11 +621,26 @@ interface TableLabelsProps {
   animatedPositionsRef?: AnimatedPositionsRef;
 }
 
+// Camera movement (squared world units per check) below which the camera
+// counts as at rest for label recomputation, and how many new labels may
+// mount per update tick
+const LABEL_REST_EPSILON_SQ = 0.01;
+const LABEL_MOUNTS_PER_TICK = 30;
+
 /**
  * Distance-culled labels: only tables near the camera (or highlighted by
  * selection/hover/search) get a Text object. Rendering all 400 labels cost
  * a draw call each and a per-frame billboard update; zoomed out they are
  * unreadable anyway.
+ *
+ * The proximity-based label set is only recomputed while the camera is at
+ * rest: mounting/unmounting batches of Text objects mid-gesture stalls the
+ * main thread on glyph generation and layout (measured 100-200ms per batch,
+ * dropping close-range pan/orbit to 15-27fps on a 379-table schema).
+ * Mounted labels keep tracking their tables every frame during the gesture,
+ * interaction-driven labels (selection/hover/search) still update
+ * immediately, and mounting is amortized to LABEL_MOUNTS_PER_TICK per
+ * update so settling never causes one big stall.
  */
 function TableLabels({
   tables,
@@ -636,15 +651,62 @@ function TableLabels({
   animatedPositionsRef,
 }: TableLabelsProps) {
   const { camera } = useThree();
-  const [labelNames, setLabelNames] = useState<string[]>([]);
-  const labelNamesRef = useRef<string[]>([]);
+  const [proximityNames, setProximityNames] = useState<string[]>([]);
+  const proximityRef = useRef<string[]>([]);
   const frameCounterRef = useRef(0);
+  const lastCameraPositionRef = useRef(
+    new THREE.Vector3(Infinity, Infinity, Infinity)
+  );
+  const needsRecomputeRef = useRef(true);
   const labelGroupsRef = useRef(new Map<string, THREE.Group>());
 
   const tableByName = useMemo(
     () => new Map(tables.map((table) => [table.name, table])),
     [tables]
   );
+
+  // Table positions change on layout switches and drags — recompute once
+  // the new positions are in place
+  useEffect(() => {
+    needsRecomputeRef.current = true;
+  }, [tables]);
+
+  // Interaction-driven labels update immediately: they add/remove a handful
+  // of Text objects at a time, which never causes a noticeable stall
+  const priorityNames = useMemo(() => {
+    const names: string[] = [];
+    const seen = new Set<string>();
+    const add = (name: string) => {
+      if (!seen.has(name) && tableByName.has(name)) {
+        seen.add(name);
+        names.push(name);
+      }
+    };
+    if (selectedTable) add(selectedTable.name);
+    if (hoveredTable) add(hoveredTable.name);
+    let budget = 60;
+    filteredTables.forEach((name) => {
+      if (budget-- > 0) add(name);
+    });
+    budget = 40;
+    relatedTables.forEach((name) => {
+      if (budget-- > 0) add(name);
+    });
+    return names;
+  }, [selectedTable, hoveredTable, filteredTables, relatedTables, tableByName]);
+
+  const labelNames = useMemo(() => {
+    const seen = new Set(priorityNames);
+    const merged = [...priorityNames];
+    for (const name of proximityNames) {
+      if (merged.length >= LABEL_MAX_COUNT) break;
+      if (!seen.has(name)) {
+        seen.add(name);
+        merged.push(name);
+      }
+    }
+    return merged;
+  }, [priorityNames, proximityNames]);
 
   useFrame(() => {
     // Billboard + position sync every frame for the mounted labels
@@ -661,43 +723,58 @@ function TableLabels({
       group.lookAt(camera.position);
     });
 
-    // Recompute WHICH labels are visible at ~4Hz
-    if (++frameCounterRef.current % 15 !== 0) return;
+    if (++frameCounterRef.current % 10 !== 0) return;
 
-    const next: string[] = [];
-    const seen = new Set<string>();
-    const add = (name: string) => {
-      if (!seen.has(name) && tableByName.has(name)) {
-        seen.add(name);
-        next.push(name);
-      }
-    };
+    // Camera still moving? Keep the current label set; recompute when it
+    // settles
+    const movedSq = camera.position.distanceToSquared(
+      lastCameraPositionRef.current
+    );
+    lastCameraPositionRef.current.copy(camera.position);
+    if (movedSq > LABEL_REST_EPSILON_SQ) {
+      needsRecomputeRef.current = true;
+      return;
+    }
+    if (!needsRecomputeRef.current) return;
 
-    if (selectedTable) add(selectedTable.name);
-    if (hoveredTable) add(hoveredTable.name);
-    filteredTables.forEach(add);
-    relatedTables.forEach(add);
-
+    const desired: string[] = [];
     const maxDistanceSq = LABEL_VISIBILITY_DISTANCE * LABEL_VISIBILITY_DISTANCE;
     for (const table of tables) {
-      if (next.length >= LABEL_MAX_COUNT) break;
-      if (seen.has(table.name)) continue;
+      if (desired.length >= LABEL_MAX_COUNT) break;
       const position = animatedPositions?.get(table.name) || table.position;
       const dx = camera.position.x - position[0];
       const dy = camera.position.y - position[1];
       const dz = camera.position.z - position[2];
       if (dx * dx + dy * dy + dz * dz < maxDistanceSq) {
-        add(table.name);
+        desired.push(table.name);
       }
     }
 
-    const previous = labelNamesRef.current;
+    // Keep already-mounted labels that are still wanted; add new ones in
+    // amortized batches, finishing on subsequent ticks if truncated
+    const desiredSet = new Set(desired);
+    const previous = proximityRef.current;
+    const previousSet = new Set(previous);
+    const next = previous.filter((name) => desiredSet.has(name));
+    let mounts = 0;
+    let truncated = false;
+    for (const name of desired) {
+      if (previousSet.has(name)) continue;
+      if (mounts >= LABEL_MOUNTS_PER_TICK) {
+        truncated = true;
+        break;
+      }
+      next.push(name);
+      mounts++;
+    }
+    needsRecomputeRef.current = truncated;
+
     const unchanged =
       previous.length === next.length &&
       previous.every((name, i) => name === next[i]);
     if (!unchanged) {
-      labelNamesRef.current = next;
-      setLabelNames(next);
+      proximityRef.current = next;
+      setProximityNames(next);
     }
   });
 

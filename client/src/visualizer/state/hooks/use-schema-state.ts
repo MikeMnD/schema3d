@@ -26,7 +26,11 @@ export function useSchemaState(
 ): UseSchemaStateReturn {
   const [currentSchema, setCurrentSchema] =
     useState<DatabaseSchema>(getInitialSchema);
-  const persistedSchemaRef = useRef<DatabaseSchema>(getInitialSchema());
+  // Seed the ref from the state value. useRef(getInitialSchema()) would
+  // evaluate its argument on EVERY render — and getInitialSchema runs the
+  // full O(n²) force layout, ~150ms per render on a 379-table schema, which
+  // froze pan/orbit whenever hover state changed.
+  const persistedSchemaRef = useRef<DatabaseSchema>(currentSchema);
 
   // Clean up URL hash and pending view state after initial schema load
   useEffect(() => {

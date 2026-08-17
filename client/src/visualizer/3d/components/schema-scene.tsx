@@ -118,7 +118,13 @@ export function SchemaScene({
 }: SchemaSceneProps) {
   return (
     <Canvas
-      gl={{ preserveDrawingBuffer: true }}
+      gl={{
+        preserveDrawingBuffer: true,
+        // On hybrid-GPU laptops browsers default WebGL to the power-saving
+        // integrated GPU; ask for the discrete one (e.g. the RTX on an
+        // Iris Xe + RTX machine) — at 379+ tables the difference is real
+        powerPreference: "high-performance",
+      }}
       events={throttledEvents}
       onCreated={({ gl, raycaster }) => {
         glCanvasRef.current = gl.domElement;
