@@ -22,6 +22,7 @@ interface UseFilterStateReturn {
   visibleTableNames: Set<string>;
   handleFilter: (matched: Set<string>, related: Set<string>) => void;
   handleCategoryToggle: (category: string) => void;
+  handleSetAllCategories: (enabled: boolean) => void;
   resetCategories: (schema: DatabaseSchema) => void;
 }
 
@@ -67,6 +68,16 @@ export function useFilterState(
       return next;
     });
   }, []);
+
+  // Enable or disable all categories at once (legend "All"/"None" buttons)
+  const handleSetAllCategories = useCallback(
+    (enabled: boolean) => {
+      setSelectedCategories(
+        enabled ? initializeCategories(currentSchema) : new Set<string>()
+      );
+    },
+    [currentSchema]
+  );
 
   const resetCategories = useCallback((schema: DatabaseSchema) => {
     startTransition(() => {
@@ -135,6 +146,7 @@ export function useFilterState(
     visibleTableNames,
     handleFilter,
     handleCategoryToggle,
+    handleSetAllCategories,
     resetCategories,
   };
 }

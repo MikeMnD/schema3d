@@ -27,6 +27,7 @@ interface LayoutControlsProps {
   onViewModeChange?: (mode: "2D" | "3D") => void;
   selectedCategories?: Set<string>;
   onCategoryToggle?: (category: string) => void;
+  onCategoriesSetAll?: (enabled: boolean) => void;
 }
 
 interface LayoutButtonProps {
@@ -87,6 +88,7 @@ export function LayoutControls({
   onViewModeChange,
   selectedCategories,
   onCategoryToggle,
+  onCategoriesSetAll,
 }: LayoutControlsProps) {
   const [hoveredButton, setHoveredButton] = useState<LayoutType | null>(null);
 
@@ -98,6 +100,7 @@ export function LayoutControls({
           schema={schema}
           selectedCategories={selectedCategories}
           onCategoryToggle={onCategoryToggle}
+          onCategoriesSetAll={onCategoriesSetAll}
           onSchemaChange={onSchemaChange}
           onCategoryUpdate={onCategoryUpdate}
         />

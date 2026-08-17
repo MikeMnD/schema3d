@@ -231,6 +231,7 @@ export function SchemaVisualizer() {
           onLayoutChange={layoutState.handleLayoutChange}
           onViewModeChange={layoutState.setViewMode}
           onCategoryToggle={filterState.handleCategoryToggle}
+          onCategoriesSetAll={filterState.handleSetAllCategories}
           onFilter={filterState.handleFilter}
           onRecenter={cameraState.handleRecenter}
           onTableClose={onTableClose}

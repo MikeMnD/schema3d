@@ -35,6 +35,7 @@ interface SchemaOverlayProps {
   onLayoutChange: (layout: LayoutType) => void;
   onViewModeChange: (mode: "2D" | "3D") => void;
   onCategoryToggle: (category: string) => void;
+  onCategoriesSetAll?: (enabled: boolean) => void;
   onFilter: (matched: Set<string>, related: Set<string>) => void;
   onRecenter: () => void;
   onTableClose: () => void;
@@ -57,6 +58,7 @@ export function SchemaOverlay({
   onLayoutChange,
   onViewModeChange,
   onCategoryToggle,
+  onCategoriesSetAll,
   onFilter,
   onRecenter,
   onTableClose,
@@ -128,6 +130,7 @@ export function SchemaOverlay({
         onViewModeChange={onViewModeChange}
         selectedCategories={selectedCategories}
         onCategoryToggle={onCategoryToggle}
+        onCategoriesSetAll={onCategoriesSetAll}
       />
 
       {/* Re-center button */}

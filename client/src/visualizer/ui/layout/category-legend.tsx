@@ -32,6 +32,7 @@ interface CategoryLegendProps {
   schema: DatabaseSchema;
   selectedCategories?: Set<string>;
   onCategoryToggle?: (category: string) => void;
+  onCategoriesSetAll?: (enabled: boolean) => void;
   onSchemaChange: (schema: DatabaseSchema) => void;
   onCategoryUpdate?: (schema: DatabaseSchema) => void;
 }
@@ -40,6 +41,7 @@ export function CategoryLegend({
   schema,
   selectedCategories,
   onCategoryToggle,
+  onCategoriesSetAll,
   onSchemaChange,
   onCategoryUpdate,
 }: CategoryLegendProps) {
@@ -280,53 +282,79 @@ export function CategoryLegend({
           />
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-0.5 text-xs sm:text-sm mb-2 sm:mb-3">
-          {categories.map(([category, color]) => {
-            const isSelected =
-              !selectedCategories || selectedCategories.has(category);
-            return (
-              <div
-                key={category}
-                className={`flex items-center gap-2 group ${
-                  !isSelected ? "opacity-50" : ""
-                }`}
+          {onCategoriesSetAll && categories.length > 1 && (
+            <div className="flex gap-1 pb-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-6 text-xs"
+                onClick={() => onCategoriesSetAll(true)}
+                title="Enable all categories"
               >
+                All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-6 text-xs"
+                onClick={() => onCategoriesSetAll(false)}
+                title="Disable all categories"
+              >
+                None
+              </Button>
+            </div>
+          )}
+          {/* Scroll inside the list: large schemas can have 25+ categories,
+              which would push the legend (and these controls) off-screen */}
+          <div className="max-h-[38vh] overflow-y-auto pr-1 space-y-0.5">
+            {categories.map(([category, color]) => {
+              const isSelected =
+                !selectedCategories || selectedCategories.has(category);
+              return (
                 <div
-                  className={`flex items-center gap-2 flex-1 cursor-pointer hover:opacity-80 transition-opacity`}
-                  onClick={() => onCategoryToggle?.(category)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onCategoryToggle?.(category);
-                    }
-                  }}
+                  key={category}
+                  className={`flex items-center gap-2 group ${
+                    !isSelected ? "opacity-50" : ""
+                  }`}
                 >
                   <div
-                    className="w-3 h-3 sm:w-4 sm:h-4 rounded border border-slate-600"
-                    style={{
-                      backgroundColor: isSelected ? color : "transparent",
-                      borderColor: color,
+                    className={`flex items-center gap-2 flex-1 cursor-pointer hover:opacity-80 transition-opacity`}
+                    onClick={() => onCategoryToggle?.(category)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onCategoryToggle?.(category);
+                      }
                     }}
-                  />
-                  <span className="text-slate-300 truncate">{category}</span>
+                  >
+                    <div
+                      className="w-3 h-3 sm:w-4 sm:h-4 rounded border border-slate-600"
+                      style={{
+                        backgroundColor: isSelected ? color : "transparent",
+                        borderColor: color,
+                      }}
+                    />
+                    <span className="text-slate-300 truncate">{category}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-blue-400"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingCategory(category);
+                      setIsNewCategory(false);
+                    }}
+                    title="Edit category"
+                  >
+                    <Pencil size={12} className="sm:w-3.5 sm:h-3.5" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-blue-400"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingCategory(category);
-                    setIsNewCategory(false);
-                  }}
-                  title="Edit category"
-                >
-                  <Pencil size={12} className="sm:w-3.5 sm:h-3.5" />
-                </Button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
           <Button
             variant="outline"
             size="sm"

@@ -24,7 +24,14 @@ export const COLOR_PALETTE = [
 ];
 
 /**
- * Guess category from table name based on keywords
+ * Guess category from table name based on keywords.
+ *
+ * The list is ordered — the FIRST matching keyword wins — so more specific
+ * domain groups (real-estate CRM: offers, deals, deposits, portals, ...)
+ * come before generic buckets. Rules that must outrank each other are
+ * annotated; e.g. "ranking" (Analytics) sits before "viewing" so
+ * ViewingRankingResults lands in Analytics while Viewings stays a group of
+ * its own.
  */
 export function guessCategory(tableName: string): string {
   const name = tableName.toLowerCase();
@@ -32,19 +39,181 @@ export function guessCategory(tableName: string): string {
   const categories = [
     {
       name: "Auth",
-      keywords: ["user", "auth", "account", "profile"],
+      keywords: [
+        "user",
+        "auth",
+        "account",
+        "profile",
+        "password",
+        "role",
+        "permission",
+        "openiddict",
+        "impersonation",
+      ],
     },
+    // Framework/platform tables (before everything else so Abp* internals
+    // don't leak into domain groups; Abp user/role tables are caught by
+    // Auth above)
     {
-      name: "Product",
-      keywords: ["product", "item", "inventory", "category"],
+      name: "System",
+      keywords: ["abp", "webhook"],
     },
+    // Before Viewings/Offers: rankings/KPIs/comparative analyses
+    {
+      name: "Analytics",
+      keywords: [
+        "cma",
+        "kpi",
+        "ranking",
+        "efficiency",
+        "analytics",
+        "metrics",
+        "reports",
+      ],
+    },
+    { name: "ImotBg", keywords: ["imotbg"] },
+    // Client search requests (SearchesOffers etc.) — before Portals/Offers
+    { name: "Search", keywords: ["search"] },
+    // Listing portals and export targets — before Offers/Projects so
+    // *ExportedOffers/*ExportedProjects group with their portal
+    {
+      name: "Portals",
+      keywords: [
+        "imoteka",
+        "imotinet",
+        "fortonhomes",
+        "ocenimebg",
+        "realistimo",
+        "exported",
+        "externalportal",
+        "externaloffer",
+        "externalagenc",
+        "internalwebsite",
+        "website",
+        "portal",
+      ],
+    },
+    { name: "Viewings", keywords: ["viewing"] },
+    { name: "Deals", keywords: ["deal"] },
+    { name: "Deposits", keywords: ["deposit"] },
+    // Client-prefixed link/lookup tables (ClientsAddresses, ClientsTasks,
+    // ...) must stay with clients rather than the linked entity's group.
+    // "customer" stays in the LATER Customer rule so generic names like
+    // customer_orders keep grouping by their entity (Order)
+    { name: "Customer", keywords: ["client"] },
+    // Before Offers so CampaignEmailOffers groups with campaigns
+    {
+      name: "Marketing",
+      keywords: ["campaign", "marketing", "email", "source", "social"],
+    },
+    { name: "Offers", keywords: ["offer", "operation"] },
+    { name: "Projects", keywords: ["project"] },
+    { name: "Estates", keywords: ["estate", "building", "property"] },
+    // Property attribute lookups (furniture, heating, construction, ...)
+    {
+      name: "Attributes",
+      keywords: [
+        "furniture",
+        "heating",
+        "condition",
+        "completion",
+        "construction",
+        "facing",
+        "fence",
+        "garage",
+        "joinery",
+        "infrastructure",
+        "regulation",
+        "lease",
+        "lifestyle",
+        "floor",
+        "house",
+        "immunity",
+        "advantage",
+      ],
+    },
+    // Order/customer precedence expected by generic schemas:
+    // customer_orders -> Order, customer_addresses -> Customer
     {
       name: "Order",
       keywords: ["order", "purchase", "cart"],
     },
     {
       name: "Customer",
-      keywords: ["customer", "client"],
+      keywords: ["customer"],
+    },
+    {
+      name: "Locations",
+      keywords: [
+        "district",
+        "populated",
+        "province",
+        "municipal",
+        "countr",
+        "street",
+        "resort",
+        "location",
+        "address",
+        "territor",
+      ],
+    },
+    {
+      name: "Organization",
+      keywords: [
+        "department",
+        "division",
+        "team",
+        "office",
+        "workplace",
+        "sector",
+        "compan",
+      ],
+    },
+    {
+      name: "Customer",
+      keywords: [
+        "contact",
+        "partner",
+        "gender",
+        "marital",
+        "nationalit",
+        "title",
+        "embassy",
+      ],
+    },
+    {
+      name: "Activities",
+      keywords: [
+        "meeting",
+        "call",
+        "task",
+        "survey",
+        "calendar",
+        "workingtime",
+        "match",
+      ],
+    },
+    {
+      name: "Financial",
+      keywords: [
+        "payment",
+        "transaction",
+        "invoice",
+        "salary",
+        "contract",
+        "bank",
+        "vat",
+        "financ",
+        "card",
+      ],
+    },
+    {
+      name: "Media",
+      keywords: ["media", "image", "video", "audio", "file", "binary"],
+    },
+    {
+      name: "Product",
+      keywords: ["product", "item", "inventory", "category"],
     },
     {
       name: "Content",
@@ -52,27 +221,11 @@ export function guessCategory(tableName: string): string {
     },
     {
       name: "Metadata",
-      keywords: ["tag", "category", "meta"],
-    },
-    {
-      name: "Financial",
-      keywords: ["payment", "transaction", "invoice", "salary"],
+      keywords: ["tag", "meta", "reason"],
     },
     {
       name: "Schedule",
       keywords: ["schedule", "queue"],
-    },
-    {
-      name: "Media",
-      keywords: ["media", "image", "video", "audio"],
-    },
-    {
-      name: "Search",
-      keywords: ["search", "index", "full-text"],
-    },
-    {
-      name: "Analytics",
-      keywords: ["analytics", "metrics", "reports"],
     },
     {
       name: "Notification",
@@ -94,7 +247,6 @@ export function guessCategory(tableName: string): string {
       name: "Positions",
       keywords: [
         "position",
-        "role",
         "job",
         "faculty",
         "staff",
@@ -108,10 +260,6 @@ export function guessCategory(tableName: string): string {
         "coach",
         "mentor",
         "consultant",
-        "expert",
-        "specialist",
-        "practitioner",
-        "professional",
         "expert",
         "specialist",
         "practitioner",
