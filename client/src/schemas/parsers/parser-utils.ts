@@ -60,7 +60,7 @@ export function guessCategory(tableName: string): string {
     },
     // Before Viewings/Offers: rankings/KPIs/comparative analyses
     {
-      name: "Analytics",
+      name: "KPI",
       keywords: [
         "cma",
         "kpi",
@@ -75,20 +75,32 @@ export function guessCategory(tableName: string): string {
     // Client search requests (SearchesOffers etc.) — before Portals/Offers
     { name: "Search", keywords: ["search"] },
     // Listing portals and export targets — before Offers/Projects so
-    // *ExportedOffers/*ExportedProjects group with their portal
+    // *ExportedOffers/*ExportedProjects group with their portal.
+    // Internal = the company's own brands (Address, Imoteka, Unique
+    // Estates, New Estates, Forton) plus internal websites; everything
+    // else exports to third-party portals. Internal must come first so
+    // e.g. AddressExportedOffers doesn't fall through to "exported".
     {
-      name: "Portals",
+      name: "Internal Portals",
       keywords: [
         "imoteka",
-        "imotinet",
+        "uniqueestates",
+        "newestates",
         "fortonhomes",
+        "addressexported",
+        "internalwebsite",
+      ],
+    },
+    {
+      name: "External Portals",
+      keywords: [
+        "imotinet",
         "ocenimebg",
         "realistimo",
         "exported",
         "externalportal",
         "externaloffer",
         "externalagenc",
-        "internalwebsite",
         "website",
         "portal",
       ],
@@ -98,9 +110,9 @@ export function guessCategory(tableName: string): string {
     { name: "Deposits", keywords: ["deposit"] },
     // Client-prefixed link/lookup tables (ClientsAddresses, ClientsTasks,
     // ...) must stay with clients rather than the linked entity's group.
-    // "customer" stays in the LATER Customer rule so generic names like
+    // "customer" stays in the LATER Clients rule so generic names like
     // customer_orders keep grouping by their entity (Order)
-    { name: "Customer", keywords: ["client"] },
+    { name: "Clients", keywords: ["client"] },
     // Before Offers so CampaignEmailOffers groups with campaigns
     {
       name: "Marketing",
@@ -109,9 +121,12 @@ export function guessCategory(tableName: string): string {
     { name: "Offers", keywords: ["offer", "operation"] },
     { name: "Projects", keywords: ["project"] },
     { name: "Estates", keywords: ["estate", "building", "property"] },
-    // Property attribute lookups (furniture, heating, construction, ...)
+    // Nomenclatures: property attribute lookups (furniture, heating,
+    // construction, ...) plus the small reference/support families that
+    // would otherwise clutter the legend as one-table groups (files,
+    // images, tags, employees, schedules, migrations, ...)
     {
-      name: "Attributes",
+      name: "Nomenclatures",
       keywords: [
         "furniture",
         "heating",
@@ -130,16 +145,31 @@ export function guessCategory(tableName: string): string {
         "house",
         "immunity",
         "advantage",
+        "image",
+        "file",
+        "binary",
+        "media",
+        "video",
+        "audio",
+        "employee",
+        "job",
+        "position",
+        "tag",
+        "reason",
+        "comment",
+        "schedule",
+        "queue",
+        "migration",
       ],
     },
     // Order/customer precedence expected by generic schemas:
-    // customer_orders -> Order, customer_addresses -> Customer
+    // customer_orders -> Order, customer_addresses -> Clients
     {
       name: "Order",
       keywords: ["order", "purchase", "cart"],
     },
     {
-      name: "Customer",
+      name: "Clients",
       keywords: ["customer"],
     },
     {
@@ -170,7 +200,7 @@ export function guessCategory(tableName: string): string {
       ],
     },
     {
-      name: "Customer",
+      name: "Clients",
       keywords: [
         "contact",
         "partner",
@@ -208,24 +238,16 @@ export function guessCategory(tableName: string): string {
       ],
     },
     {
-      name: "Media",
-      keywords: ["media", "image", "video", "audio", "file", "binary"],
-    },
-    {
       name: "Product",
       keywords: ["product", "item", "inventory", "category"],
     },
     {
       name: "Content",
-      keywords: ["post", "article", "comment", "content"],
+      keywords: ["post", "article", "content"],
     },
     {
       name: "Metadata",
-      keywords: ["tag", "meta", "reason"],
-    },
-    {
-      name: "Schedule",
-      keywords: ["schedule", "queue"],
+      keywords: ["meta"],
     },
     {
       name: "Notification",
@@ -246,12 +268,9 @@ export function guessCategory(tableName: string): string {
     {
       name: "Positions",
       keywords: [
-        "position",
-        "job",
         "faculty",
         "staff",
         "student",
-        "employee",
         "advisor",
         "professor",
         "lecturer",

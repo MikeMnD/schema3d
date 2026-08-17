@@ -24,15 +24,17 @@ describe("Category Filtering - guessCategory", () => {
   });
 
   it("should categorize customer tables correctly", () => {
-    expect(guessCategory("customers")).toBe("Customer");
-    expect(guessCategory("clients")).toBe("Customer");
-    expect(guessCategory("customer_addresses")).toBe("Customer");
+    expect(guessCategory("customers")).toBe("Clients");
+    expect(guessCategory("clients")).toBe("Clients");
+    expect(guessCategory("customer_addresses")).toBe("Clients");
   });
 
   it("should categorize content tables correctly", () => {
     expect(guessCategory("posts")).toBe("Content");
     expect(guessCategory("articles")).toBe("Content");
-    expect(guessCategory("comments")).toBe("Content");
+    // comments are grouped with reference/support tables since the
+    // Nomenclatures consolidation
+    expect(guessCategory("comments")).toBe("Nomenclatures");
     expect(guessCategory("blog_content")).toBe("Content");
   });
 
