@@ -9,6 +9,8 @@ import {
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { Text } from "@react-three/drei";
+import { Suspense } from "react";
+import { LABEL_FONT } from "../../label-font";
 import type { Table } from "@/shared/types/schema";
 import type { AnimatedPositionsRef, Relationship } from "../../types";
 import {
@@ -395,14 +397,19 @@ export function InstancedTables({
         />
       )}
 
-      <TableLabels
-        tables={tables}
-        selectedTable={selectedTable}
-        hoveredTable={hoveredTable}
-        filteredTables={filteredTables}
-        relatedTables={relatedTables}
-        animatedPositionsRef={animatedPositionsRef}
-      />
+      {/* Nested boundary: if the label font ever suspends, only labels
+          hide — never the tables/lines (React hides ALL siblings of a
+          suspended child in the same boundary) */}
+      <Suspense fallback={null}>
+        <TableLabels
+          tables={tables}
+          selectedTable={selectedTable}
+          hoveredTable={hoveredTable}
+          filteredTables={filteredTables}
+          relatedTables={relatedTables}
+          animatedPositionsRef={animatedPositionsRef}
+        />
+      </Suspense>
     </group>
   );
 }
@@ -797,6 +804,7 @@ function TableLabels({
             ]}
           >
             <Text
+              font={LABEL_FONT}
               fontSize={0.3}
               color="white"
               anchorX="center"

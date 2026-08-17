@@ -1,5 +1,5 @@
 import "@fontsource/inter";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, MemoryRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -14,9 +14,16 @@ const SchemaVisualizer = lazy(() =>
 const About = lazy(() => import("../pages/about"));
 const NotFound = lazy(() => import("../pages/not-found"));
 
+// The standalone single-file build runs from file://, where the URL path is
+// the local file path — BrowserRouter would match the 404 route and history
+// pushes are not allowed. Route in memory instead; the schema share-hash is
+// read directly from window.location and is unaffected.
+const Router =
+  window.location.protocol === "file:" ? MemoryRouter : BrowserRouter;
+
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <div
         style={{
           width: "100vw",
@@ -53,7 +60,7 @@ function App() {
         <SpeedInsights />
         <ToastProvider />
       </div>
-    </BrowserRouter>
+    </Router>
   );
 }
 

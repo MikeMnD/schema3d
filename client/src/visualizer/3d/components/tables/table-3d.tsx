@@ -8,6 +8,8 @@ import {
 } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Text, OrbitControls } from "@react-three/drei";
+import { Suspense } from "react";
+import { LABEL_FONT } from "../../label-font";
 import * as THREE from "three";
 import type { Table3DProps } from "../../types";
 import {
@@ -740,18 +742,21 @@ export const Table3D = memo(function Table3D({
         </>
       )}
       <group ref={textRef}>
-        <Text
-          position={[0, initialLabelY, 0]}
-          fontSize={0.3}
-          color="white"
-          anchorX="center"
-          anchorY="middle"
-          outlineWidth={0.02}
-          outlineColor="#000000"
-          fillOpacity={1}
-        >
-          {table.name}
-        </Text>
+        <Suspense fallback={null}>
+          <Text
+            font={LABEL_FONT}
+            position={[0, initialLabelY, 0]}
+            fontSize={0.3}
+            color="white"
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.02}
+            outlineColor="#000000"
+            fillOpacity={1}
+          >
+            {table.name}
+          </Text>
+        </Suspense>
       </group>
     </group>
   );

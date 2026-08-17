@@ -1,4 +1,6 @@
 import { Line as DreiLine, Text } from "@react-three/drei";
+import { Suspense } from "react";
+import { LABEL_FONT } from "../../label-font";
 import {
   useRef,
   useMemo,
@@ -375,17 +377,20 @@ function RelationshipLine({
       {/* Label - hidden for large schemas unless selected/hovered */}
       {showLabel && (
         <group ref={textRef}>
-          <Text
-            position={[0, 0, 0]}
-            fontSize={isHovered ? 0.25 : isSelected ? 0.18 : 0.15}
-            color={isSelected ? "#ffffff" : isHovered ? "#ffffff" : "#94a3b8"}
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={isHovered ? 0.02 : isSelected ? 0.015 : 0.01}
-            outlineColor="#000000"
-          >
-            {relationship.fkColumn} → {relationship.pkColumn}
-          </Text>
+          <Suspense fallback={null}>
+            <Text
+              font={LABEL_FONT}
+              position={[0, 0, 0]}
+              fontSize={isHovered ? 0.25 : isSelected ? 0.18 : 0.15}
+              color={isSelected ? "#ffffff" : isHovered ? "#ffffff" : "#94a3b8"}
+              anchorX="center"
+              anchorY="middle"
+              outlineWidth={isHovered ? 0.02 : isSelected ? 0.015 : 0.01}
+              outlineColor="#000000"
+            >
+              {relationship.fkColumn} → {relationship.pkColumn}
+            </Text>
+          </Suspense>
         </group>
       )}
 

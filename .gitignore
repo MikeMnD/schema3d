@@ -15,3 +15,4 @@ coverage
 cosher_structure_dump.md
 cosher_structure_only*.sql
 client/src/schemas/sample-schemas/cosher.sql
+Schema3D-*-standalone.zip

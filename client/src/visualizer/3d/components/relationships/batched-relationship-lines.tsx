@@ -2,6 +2,8 @@ import { useMemo, useRef, useEffect, useCallback } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { Text } from "@react-three/drei";
+import { Suspense } from "react";
+import { LABEL_FONT } from "../../label-font";
 import {
   LineSegments2,
   LineSegmentsGeometry,
@@ -325,17 +327,20 @@ export function BatchedRelationshipLines({
 
       {labelRelationship && (
         <group ref={labelGroupRef}>
-          <Text
-            position={[0, 0, 0]}
-            fontSize={0.25}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.02}
-            outlineColor="#000000"
-          >
-            {labelRelationship.fkColumn} → {labelRelationship.pkColumn}
-          </Text>
+          <Suspense fallback={null}>
+            <Text
+              font={LABEL_FONT}
+              position={[0, 0, 0]}
+              fontSize={0.25}
+              color="#ffffff"
+              anchorX="center"
+              anchorY="middle"
+              outlineWidth={0.02}
+              outlineColor="#000000"
+            >
+              {labelRelationship.fkColumn} → {labelRelationship.pkColumn}
+            </Text>
+          </Suspense>
         </group>
       )}
 
