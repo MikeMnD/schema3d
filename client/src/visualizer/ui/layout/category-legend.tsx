@@ -63,7 +63,9 @@ export function CategoryLegend({
         categoryMap.set(table.category, table.color);
       }
     });
-    return Array.from(categoryMap.entries());
+    return Array.from(categoryMap.entries()).sort(([a], [b]) =>
+      a.localeCompare(b)
+    );
   }, [schema]);
 
   const handleDeleteCategory = (categoryName: string) => {
