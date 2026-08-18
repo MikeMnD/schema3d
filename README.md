@@ -134,6 +134,57 @@ To test the production build locally before deploying:
 
 **Note:** The production build serves static files from `dist/public` and runs the bundled server from `dist/index.js`. Make sure both are generated successfully during the build process.
 
+### Standalone Single-File Build
+
+For sharing the app with someone who has no Node, no server and possibly no
+internet connection:
+
+```bash
+npm run build:standalone
+```
+
+This produces **one self-contained HTML file** at `dist/standalone/index.html`
+(~2.8 MB) with every script, style, font and the bundled schema inlined.
+Opening it is running it — double-click the file and it loads in the browser
+straight from `file://`. Verified to work fully offline: parsing, 3D
+rendering, labels, filtering, search and PNG/CSV export are all client-side.
+
+To distribute it, just zip the file (optionally renamed, e.g.
+`Schema3D.html`) together with a short README and send it. If a private
+schema dump is present at `client/src/schemas/sample-schemas/cosher.sql`
+(gitignored), it is baked into the file — treat the resulting HTML/zip as
+confidential in that case and don't commit it.
+
+#### How the three modes compare
+
+| Command                       | What runs                            | Backend APIs (visitor stats, sessions) |
+| ----------------------------- | ------------------------------------ | -------------------------------------- |
+| `npm run dev`                 | Express + Vite dev server on :3000   | yes                                    |
+| `npm run build` + `npm start` | Express serving the optimized bundle | yes                                    |
+| `npm run build:standalone`    | nothing — the browser opens the file | no (counters show 0)                   |
+
+Notes on the standalone variant:
+
+- It is a full **production-mode** build (minified, production React) — the
+  performance is real production performance.
+- There is **no backend**: the `/api/*` analytics endpoints don't exist, the
+  calls fail silently and the visitor/active counters simply show 0.
+  Everything else works.
+- Code-splitting is intentionally disabled (everything must live in the one
+  file), so the browser parses the whole bundle up front — a fraction of a
+  second on modern hardware.
+- When opened from `file://` the app routes in memory (`MemoryRouter`)
+  instead of using browser history; served over HTTP the same file behaves
+  like the normal build. It can also be dropped onto any static host as-is.
+- 3D labels use a bundled font (`client/src/visualizer/3d/label-font.ts`),
+  so no network access is needed for text rendering.
+- The normal dev server and production build are completely unaffected —
+  the standalone build is a separate config (`vite.standalone.config.ts`).
+
+Typical refresh workflow after a schema change: re-export the dump to
+`client/src/schemas/sample-schemas/cosher.sql`, run
+`npm run build:standalone`, zip `dist/standalone/index.html`, send.
+
 ## Deployment
 
 ### Vercel Deployment
