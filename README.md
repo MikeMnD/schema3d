@@ -6,6 +6,23 @@ A 3D database schema visualization tool that renders database tables as interact
 
 **🌐 [Live Demo](https://schema3d.com)** | [Documentation](#getting-started) | [Contributing](CONTRIBUTING.md)
 
+> **Fork status (internal tool).** This fork is maintained as an internal
+> database-exploration tool and deviates from upstream in a few ways:
+>
+> - When a (gitignored) schema dump exists at
+>   `client/src/schemas/sample-schemas/cosher.sql`, it becomes the default
+>   and only preselected schema; without it the demo schemas below apply.
+> - All analytics (PostHog, Vercel) and SEO markup are removed.
+> - The Share button, CSV export and the visitors/active stats panel are
+>   commented out in the code, not deleted — easy to re-enable.
+> - The renderer is heavily optimized for multi-hundred-table schemas
+>   (instanced rendering above 100 tables) and a standalone offline
+>   single-file build exists (see below).
+>
+> **Maintainers and AI agents: read [CLAUDE.md](CLAUDE.md) first** — it
+> documents the performance invariants and conventions that are easy to
+> regress.
+
 ## Features
 
 ### 🎨 Interactive 3D Visualization
