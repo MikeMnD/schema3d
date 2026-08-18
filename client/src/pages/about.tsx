@@ -1,4 +1,3 @@
-import { AboutPageMetadata } from "@/shared/metadata";
 import {
   Card,
   CardContent,
@@ -13,7 +12,7 @@ import {
   TabsTrigger,
 } from "@/shared/ui-components/tabs";
 import { Separator } from "@/shared/ui-components/separator";
-import { Info, Eye, Code2, Mail, ArrowLeft } from "lucide-react";
+import { Info, Eye, Code2, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
@@ -22,7 +21,6 @@ import { Suspense } from "react";
 export default function About() {
   return (
     <>
-      <AboutPageMetadata />
       <div className="h-screen w-full overflow-y-auto relative">
         {/* Starry sky background */}
         <div className="fixed inset-0 z-0">
@@ -287,56 +285,6 @@ export default function About() {
                   no installation or database connections—works seamlessly with
                   MySQL, PostgreSQL, SQL Server, and Mermaid ER diagrams.
                 </p>
-              </div>
-
-              <Separator className="bg-slate-700" />
-
-              <div>
-                <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-blue-400" />
-                  Get In Touch
-                </h2>
-                <div className="space-y-3 text-slate-300 leading-relaxed">
-                  <p>
-                    Schema3D is an open-source project! Check out the{" "}
-                    <a
-                      href="https://github.com/shane-jacobeen/schema3d/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
-                    >
-                      GitHub repository
-                    </a>{" "}
-                    to explore the code, report issues, or contribute to the
-                    project.
-                  </p>
-                  <p>
-                    Have questions, feature requests, or want to share how
-                    you're using Schema3D? Join the conversation in our{" "}
-                    <a
-                      href="https://github.com/shane-jacobeen/schema3d/discussions"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
-                    >
-                      GitHub Discussions
-                    </a>
-                    —it's the best place to connect with other users and share
-                    ideas!
-                  </p>
-                  <p>
-                    For professional inquiries, connect with me on{" "}
-                    <a
-                      href="https://www.linkedin.com/in/shane-jacobeen/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
-                    >
-                      LinkedIn
-                    </a>
-                    .
-                  </p>
-                </div>
               </div>
             </CardContent>
           </Card>

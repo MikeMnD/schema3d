@@ -7,11 +7,13 @@ import { SearchFilter } from "@/visualizer/ui/search/search-filter";
 import { SchemaSelector } from "@/visualizer/ui/schema/schema-controls";
 import { LayoutControls } from "@/visualizer/ui/layout/layout-controls";
 import { ExportControls } from "@/visualizer/ui/export/export-controls";
-import { ShareButton } from "@/visualizer/ui/schema/share-button";
-import { schemaToFormat } from "@/schemas/utils/schema-converter";
+// Share is hidden for now — to re-enable, restore the commented imports,
+// the useCollectViewState call and the <ShareButton> below
+// import { ShareButton } from "@/visualizer/ui/schema/share-button";
+// import { schemaToFormat } from "@/schemas/utils/schema-converter";
 import { TableInfo } from "@/visualizer/ui/panels/table-info";
 import { RelationshipInfo } from "@/visualizer/ui/panels/relationship-info";
-import { useCollectViewState } from "@/visualizer/state/hooks/use-collect-view-state";
+// import { useCollectViewState } from "@/visualizer/state/hooks/use-collect-view-state";
 import type { DatabaseSchema, Table } from "@/shared/types/schema";
 import type { Relationship } from "@/visualizer/3d/types";
 import type { LayoutType } from "@/visualizer/ui/layout/layout-controls";
@@ -64,13 +66,13 @@ export function SchemaOverlay({
   onTableClose,
   onRelationshipClose,
 }: SchemaOverlayProps) {
-  // Collect view state including custom categories
-  const viewState = useCollectViewState(
-    selectedCategories,
-    currentLayout,
-    viewMode,
-    schema
-  );
+  // Collect view state including custom categories (used by ShareButton)
+  // const viewState = useCollectViewState(
+  //   selectedCategories,
+  //   currentLayout,
+  //   viewMode,
+  //   schema
+  // );
 
   return (
     <>
@@ -148,7 +150,7 @@ export function SchemaOverlay({
 
       {/* Share and Export controls */}
       <div className="absolute bottom-safe-bottom right-2 sm:bottom-safe-bottom-lg sm:right-4 flex flex-col gap-2">
-        {/* Share button */}
+        {/* Share button hidden for now:
         <ShareButton
           schemaText={schemaToFormat(schema)}
           format={schema.format}
@@ -156,6 +158,7 @@ export function SchemaOverlay({
           variant="outline"
           size="sm"
         />
+        */}
 
         {/* Export controls */}
         <ExportControls schema={schema} canvasRef={glCanvasRef} />

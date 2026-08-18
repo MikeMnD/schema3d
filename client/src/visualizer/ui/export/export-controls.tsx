@@ -1,8 +1,14 @@
-import { Image, FileSpreadsheet } from "lucide-react";
+// CSV export is hidden for now — to re-enable, restore the commented
+// imports, handler and button below
+import { Image /* , FileSpreadsheet */ } from "lucide-react";
 import { Button } from "@/shared/ui-components/button";
 import { Card } from "@/shared/ui-components/card";
 import type { DatabaseSchema } from "@/shared/types/schema";
-import { escapeCSV, downloadFile, generateTimestamp } from "./export-utils";
+import {
+  /* escapeCSV, */
+  downloadFile,
+  /* generateTimestamp, */
+} from "./export-utils";
 
 interface ExportControlsProps {
   schema: DatabaseSchema;
@@ -28,6 +34,7 @@ export function ExportControls({ schema, canvasRef }: ExportControlsProps) {
     }
   };
 
+  /*
   const exportToCSV = () => {
     try {
       // Build CSV content
@@ -67,6 +74,7 @@ export function ExportControls({ schema, canvasRef }: ExportControlsProps) {
       console.error("CSV export failed:", error);
     }
   };
+  */
 
   return (
     <Card className="bg-slate-900/70 border-slate-700 text-white backdrop-blur-sm p-2 sm:p-3">
@@ -83,6 +91,7 @@ export function ExportControls({ schema, canvasRef }: ExportControlsProps) {
           <Image size={12} className="hidden sm:block sm:w-3.5 sm:h-3.5" />
           <span>PNG</span>
         </Button>
+        {/* CSV export hidden for now:
         <Button
           size="sm"
           variant="outline"
@@ -95,6 +104,7 @@ export function ExportControls({ schema, canvasRef }: ExportControlsProps) {
           />
           <span>CSV</span>
         </Button>
+        */}
       </div>
     </Card>
   );

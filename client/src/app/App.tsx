@@ -1,8 +1,6 @@
 import "@fontsource/inter";
 import { BrowserRouter, MemoryRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 import { ToastProvider } from "@/shared/ui-components/toast";
 
 // Lazy load components
@@ -56,8 +54,6 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-        <Analytics />
-        <SpeedInsights />
         <ToastProvider />
       </div>
     </Router>

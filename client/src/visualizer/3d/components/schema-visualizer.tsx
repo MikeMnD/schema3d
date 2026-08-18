@@ -1,6 +1,5 @@
 import { useRef, useMemo, useCallback, useEffect } from "react";
 import type { Table } from "@/shared/types/schema";
-import { SchemaMetadata } from "@/shared/metadata";
 import { SchemaScene } from "./schema-scene";
 import { SchemaOverlay } from "@/visualizer/ui/schema-overlay";
 import { useSchemaState } from "@/visualizer/state/hooks/use-schema-state";
@@ -160,7 +159,6 @@ export function SchemaVisualizer() {
 
   return (
     <>
-      <SchemaMetadata />
       <div
         ref={containerRef}
         className="w-full h-full relative"
