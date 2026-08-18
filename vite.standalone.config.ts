@@ -5,17 +5,15 @@ import { fileURLToPath } from "url";
 import { readFileSync } from "fs";
 import glsl from "vite-plugin-glsl";
 import { viteSingleFile } from "vite-plugin-singlefile";
+import AdmZip from "adm-zip";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * Trims the HTML for single-file distribution:
- * - drops references to files we don't ship (favicons, webmanifest) and
- *   embeds the favicon as a data URI instead, so the tab icon works from
- *   file://
- * - drops the PostHog analytics bootstrap and SEO structured data — both
- *   pointless (and the former undesirable) in an offline, private copy
+ * Trims the HTML for single-file distribution: drops references to files we
+ * don't ship (favicons, webmanifest) and embeds the favicon as a data URI
+ * instead, so the tab icon works from file://.
  */
 function standaloneHtml(): Plugin {
   return {
@@ -30,15 +28,31 @@ function standaloneHtml(): Plugin {
           /[ \t]*<link rel="(?:icon|apple-touch-icon|manifest)"[^>]*>\r?\n?/g,
           ""
         )
-        .replace(/[ \t]*<script>[\s\S]*?posthog[\s\S]*?<\/script>\r?\n?/, "")
-        .replace(
-          /[ \t]*<script type="application\/ld\+json">[\s\S]*?<\/script>\r?\n?/g,
-          ""
-        )
         .replace(
           "</title>",
           `</title>\n    <link rel="icon" type="image/png" href="data:image/png;base64,${favicon}" />`
         );
+    },
+  };
+}
+
+/**
+ * After the bundle is written, also zip it right next to the HTML:
+ * dist/standalone/Schema3D-standalone.zip containing a single
+ * Schema3D.html. Some mail/chat gateways block bare .html attachments,
+ * so both distribution forms are always ready.
+ */
+function standaloneZip(): Plugin {
+  return {
+    name: "standalone-zip",
+    apply: "build",
+    closeBundle() {
+      const outDir = path.resolve(__dirname, "dist/standalone");
+      const zip = new AdmZip();
+      zip.addLocalFile(path.join(outDir, "index.html"), "", "Schema3D.html");
+      const zipPath = path.join(outDir, "Schema3D-standalone.zip");
+      zip.writeZip(zipPath);
+      this.info(`standalone zip written: ${zipPath}`);
     },
   };
 }
@@ -52,7 +66,13 @@ function standaloneHtml(): Plugin {
  * Build with: npm run build:standalone   (output: dist/standalone)
  */
 export default defineConfig(() => ({
-  plugins: [react(), glsl(), viteSingleFile(), standaloneHtml()],
+  plugins: [
+    react(),
+    glsl(),
+    viteSingleFile(),
+    standaloneHtml(),
+    standaloneZip(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client", "src"),
