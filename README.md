@@ -143,17 +143,19 @@ internet connection:
 npm run build:standalone
 ```
 
-This produces **one self-contained HTML file** at `dist/standalone/index.html`
-(~2.8 MB) with every script, style, font and the bundled schema inlined.
-Opening it is running it — double-click the file and it loads in the browser
-straight from `file://`. Verified to work fully offline: parsing, 3D
-rendering, labels, filtering, search and PNG/CSV export are all client-side.
+This produces **exactly one self-contained HTML file** — `dist/standalone/`
+contains nothing but `index.html` (~2.7 MB) with every script, style, font,
+the favicon and the bundled schema inlined. Opening it is running it —
+double-click the file and it loads in the browser straight from `file://`.
+Verified to work fully offline: parsing, 3D rendering, labels, filtering,
+search and PNG/CSV export are all client-side. The PostHog analytics
+bootstrap and SEO markup are stripped from this variant.
 
-To distribute it, just zip the file (optionally renamed, e.g.
-`Schema3D.html`) together with a short README and send it. If a private
-schema dump is present at `client/src/schemas/sample-schemas/cosher.sql`
-(gitignored), it is baked into the file — treat the resulting HTML/zip as
-confidential in that case and don't commit it.
+To distribute it, send the file as-is (optionally renamed, e.g.
+`Schema3D.html`) or zip it first — both work. If a private schema dump is
+present at `client/src/schemas/sample-schemas/cosher.sql` (gitignored), it
+is baked into the file — treat the resulting HTML/zip as confidential in
+that case and don't commit it.
 
 #### How the three modes compare
 
